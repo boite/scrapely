@@ -1,5 +1,5 @@
 from __future__ import with_statement
-import sys, os, re, cmd, shlex, json, optparse, json, urllib, pprint
+import sys, os, re, cmd, shlex, json, optparse, json, urllib2, pprint
 from cStringIO import StringIO
 
 from scrapely.htmlpage import HtmlPage, page_to_dict, url_to_page
@@ -9,14 +9,17 @@ from scrapely.extraction import InstanceBasedLearningExtractor
 class IblTool(cmd.Cmd):
 
     prompt = 'scrapely> '
+    user_agent = 'Mozilla/5.0 ScrapelyTool/0.9'
 
     def __init__(self, filename, **kw):
         self.filename = filename
         cmd.Cmd.__init__(self, **kw)
 
     def do_ta(self, line):
-        """ta <url> [--encoding ENCODING] - add template"""
-        opts, (url,) = parse_at(line)
+        """ta <url> [--encoding ENCODING --useragent 'User-Agent'] - add template"""
+        opts, (url,) = parse_at_s(line)
+        headers = { 'User-Agent' : opts.useragent or  self.user_agent }
+        url = urllib2.Request(url, headers=headers)
         t = url_to_page(url, opts.encoding)
         templates = self._load_templates()
         templates.append(t)
@@ -81,13 +84,16 @@ class IblTool(cmd.Cmd):
             print "[%s-%d] (%s) %r" % (template_id, n, a['annotations']['content'], 
                 remove_annotation(tm.selected_data(i)))
 
-    def do_s(self, url):
-        """s <url> - scrape url"""
+    def do_s(self, line):
+        """s <url> [--encoding ENCODING --useragent 'User-Agent'] - scrape url"""
         templates = self._load_templates()
         if assert_or_print(templates, "no templates available"):
             return
+        opts, (url,) = parse_at_s(line)
+        headers = { 'User-Agent' : opts.useragent or  self.user_agent}
+        url = urllib2.Request(url, headers=headers)
         # fall back to the template encoding if none is specified
-        page = url_to_page(url, default_encoding=templates[0].encoding)
+        page = url_to_page(url, opts.encoding, templates[0].encoding)
         ex = InstanceBasedLearningExtractor((t, None) for t in templates)
         pprint.pprint(ex.extract(page)[0])
 
@@ -127,9 +133,10 @@ class IblTool(cmd.Cmd):
             templates = [page_to_dict(t) for t in templates]
             return json.dump({'templates': templates}, f)
         
-def parse_at(ta_line):
+def parse_at_s(ta_line):
     p = optparse.OptionParser()
     p.add_option('-e', '--encoding', help='page encoding')
+    p.add_option('-u', '--useragent', help='value for the user agent header')
     return p.parse_args(shlex.split(ta_line))
 
 def parse_criteria(criteria_str):
