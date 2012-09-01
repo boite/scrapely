@@ -18,7 +18,7 @@ class IblTool(cmd.Cmd):
     def do_ta(self, line):
         """ta <url> [--encoding ENCODING --useragent 'User-Agent'] - add template"""
         opts, (url,) = parse_at_s(line)
-        headers = { 'User-Agent' : opts.useragent or  self.user_agent }
+        headers = { 'User-Agent' : opts.useragent or self.user_agent }
         url = urllib2.Request(url, headers=headers)
         t = url_to_page(url, opts.encoding)
         templates = self._load_templates()
@@ -90,7 +90,7 @@ class IblTool(cmd.Cmd):
         if assert_or_print(templates, "no templates available"):
             return
         opts, (url,) = parse_at_s(line)
-        headers = { 'User-Agent' : opts.useragent or  self.user_agent}
+        headers = { 'User-Agent' : opts.useragent or self.user_agent }
         url = urllib2.Request(url, headers=headers)
         # fall back to the template encoding if none is specified
         page = url_to_page(url, opts.encoding, templates[0].encoding)
